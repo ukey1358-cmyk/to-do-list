@@ -155,6 +155,50 @@
     transition: width .5s cubic-bezier(.2,.8,.2,1);
   }
 
+  /* ─── Motto card ─── */
+  .motto {
+    background: linear-gradient(135deg, #fff5f7 0%, #fff 100%);
+    border: 1px solid var(--hairline-soft);
+    border-radius: var(--r-md);
+    padding: var(--lg);
+    margin-bottom: var(--xl);
+    position: relative;
+    overflow: hidden;
+  }
+  .motto::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 4px;
+    background: var(--primary);
+  }
+  .motto-headline {
+    font-size: 18px; font-weight: 700; color: var(--ink);
+    line-height: 1.4; margin: 0 0 var(--md);
+    letter-spacing: -0.3px;
+  }
+  .motto-headline em {
+    font-style: normal;
+    color: var(--primary);
+  }
+  .motto-list {
+    margin: 0; padding: 0; list-style: none;
+    display: flex; flex-direction: column; gap: var(--sm);
+  }
+  .motto-list li {
+    display: flex; align-items: flex-start; gap: var(--md);
+    font-size: 15px; font-weight: 500; color: var(--body);
+    line-height: 1.5;
+  }
+  .motto-num {
+    flex-shrink: 0;
+    width: 24px; height: 24px; border-radius: var(--r-full);
+    background: var(--primary); color: var(--on-primary);
+    font-size: 12px; font-weight: 700;
+    display: inline-flex; align-items: center; justify-content: center;
+    margin-top: 1px;
+  }
+
   /* ─── Filter tabs ─── */
   .tabs {
     display: flex; gap: var(--sm); margin-bottom: var(--lg);
@@ -465,6 +509,15 @@
     <span class="progress-label"><b id="progress-count">0</b> / <span id="progress-total">0</span></span>
   </div>
   <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+
+  <aside class="motto" aria-label="오늘의 격언">
+    <p class="motto-headline"><em>죽을 힘을 다해 일하라.</em> 그러면, 다음의 것들을 얻을 수 있다.</p>
+    <ol class="motto-list">
+      <li><span class="motto-num">1</span><span>진정한 기쁨과 만족</span></li>
+      <li><span class="motto-num">2</span><span>나의 인격, 내면의 성장</span></li>
+      <li><span class="motto-num">3</span><span>경제적인 풍요</span></li>
+    </ol>
+  </aside>
 
   <div class="tabs" role="tablist">
     <button class="tab active" data-filter="all" role="tab">전체 <span class="count" id="count-all">0</span></button>
