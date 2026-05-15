@@ -1,0 +1,978 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>오늘의 할 일</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css" />
+<style>
+  :root {
+    /* Airbnb Design System tokens */
+    --canvas: #ffffff;
+    --surface-soft: #f7f7f7;
+    --surface-strong: #f2f2f2;
+    --hairline: #dddddd;
+    --hairline-soft: #ebebeb;
+    --border-strong: #c1c1c1;
+    --ink: #222222;
+    --body: #3f3f3f;
+    --muted: #6a6a6a;
+    --muted-soft: #929292;
+    --primary: #ff385c;            /* Rausch */
+    --primary-active: #e00b41;
+    --primary-disabled: #ffd1da;
+    --on-primary: #ffffff;
+    --error: #c13515;
+    --shadow-1: rgba(0,0,0,0.02) 0 0 0 1px, rgba(0,0,0,0.04) 0 2px 6px 0, rgba(0,0,0,0.10) 0 4px 8px 0;
+
+    /* Spacing */
+    --xxs: 2px; --xs: 4px; --sm: 8px; --md: 12px; --base: 16px;
+    --lg: 24px; --xl: 32px; --xxl: 48px; --section: 64px;
+
+    /* Radius */
+    --r-sm: 8px; --r-md: 14px; --r-xl: 32px; --r-full: 9999px;
+
+    --font: 'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, "Helvetica Neue", "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: var(--font);
+    background: var(--canvas);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    min-height: 100vh;
+  }
+  button { font-family: inherit; cursor: pointer; }
+
+  /* ─── Top nav ─── */
+  .top-nav {
+    height: 80px;
+    border-bottom: 1px solid var(--hairline);
+    background: var(--canvas);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 var(--xl);
+    position: sticky; top: 0; z-index: 5;
+  }
+  .brand {
+    color: var(--primary);
+    font-weight: 700; font-size: 22px; letter-spacing: -0.5px;
+    display: flex; align-items: center; gap: var(--sm);
+  }
+  .brand-dot {
+    width: 28px; height: 28px; border-radius: var(--r-full);
+    background: var(--primary); display: inline-flex; align-items: center; justify-content: center;
+    color: var(--on-primary);
+  }
+  .brand-dot svg { width: 16px; height: 16px; }
+  .nav-stats { color: var(--muted); font-size: 14px; font-weight: 500; }
+  .nav-stats b { color: var(--ink); font-weight: 700; }
+
+  /* ─── Page container ─── */
+  .container {
+    max-width: 760px; margin: 0 auto;
+    padding: var(--section) var(--lg) 120px;
+  }
+
+  /* ─── Hero ─── */
+  .hero { margin-bottom: var(--xl); }
+  .hero h1 {
+    font-size: 28px; font-weight: 700; line-height: 1.43;
+    color: var(--ink); margin: 0 0 var(--xs);
+  }
+  .hero p {
+    font-size: 14px; color: var(--muted); margin: 0;
+    font-weight: 400; line-height: 1.43;
+  }
+
+  /* ─── Input pill (signature search-bar style) ─── */
+  .input-wrap {
+    margin-bottom: var(--xl); position: relative;
+  }
+  .input-pill {
+    display: flex; align-items: center;
+    background: var(--canvas);
+    border-radius: var(--r-full);
+    box-shadow: var(--shadow-1);
+    height: 64px;
+    padding: 0 8px 0 var(--lg);
+    transition: box-shadow .15s ease;
+  }
+  .input-pill:focus-within {
+    box-shadow: rgba(0,0,0,0.02) 0 0 0 1px, rgba(0,0,0,0.08) 0 4px 12px 0, rgba(0,0,0,0.14) 0 6px 14px 0;
+  }
+  .input-pill input {
+    flex: 1; border: 0; outline: 0; background: transparent;
+    font: 500 16px/1.25 var(--font); color: var(--ink);
+    padding: 0;
+  }
+  .input-pill input::placeholder { color: var(--muted); font-weight: 400; }
+  .add-orb {
+    width: 48px; height: 48px; border-radius: var(--r-full);
+    background: var(--primary); border: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--on-primary); transition: background .15s ease, transform .1s ease;
+    flex-shrink: 0;
+  }
+  .add-orb:hover { background: var(--primary-active); }
+  .add-orb:active { transform: scale(0.96); }
+  .add-orb svg { width: 18px; height: 18px; }
+
+  .input-hint {
+    margin-top: var(--sm); padding: 0 var(--lg);
+    font-size: 13px; color: var(--muted-soft); font-weight: 400;
+    display: flex; align-items: center; gap: var(--sm);
+  }
+  .kbd {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: var(--surface-soft);
+    border: 1px solid var(--hairline);
+    border-radius: 6px; padding: 1px 6px;
+    font-size: 11px; font-weight: 600; color: var(--body);
+    font-family: var(--font);
+  }
+
+  /* ─── Progress ─── */
+  .progress-row {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: var(--md);
+  }
+  .progress-label {
+    font-size: 14px; font-weight: 500; color: var(--muted);
+  }
+  .progress-label b { color: var(--ink); font-weight: 700; }
+  .progress-bar {
+    height: 6px; background: var(--surface-strong);
+    border-radius: var(--r-full); overflow: hidden;
+    margin-bottom: var(--xl);
+  }
+  .progress-fill {
+    height: 100%; background: var(--primary);
+    width: 0%; border-radius: var(--r-full);
+    transition: width .5s cubic-bezier(.2,.8,.2,1);
+  }
+
+  /* ─── Filter tabs ─── */
+  .tabs {
+    display: flex; gap: var(--sm); margin-bottom: var(--lg);
+    border-bottom: 1px solid var(--hairline-soft);
+  }
+  .tab {
+    background: transparent; border: 0;
+    padding: var(--md) var(--xs); margin-right: var(--base);
+    font-size: 14px; font-weight: 500; color: var(--muted);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+  }
+  .tab:hover { color: var(--ink); }
+  .tab.active { color: var(--ink); border-bottom-color: var(--ink); font-weight: 600; }
+  .tab .count {
+    display: inline-block; margin-left: 4px;
+    background: var(--surface-strong); color: var(--muted);
+    padding: 1px 7px; border-radius: var(--r-full);
+    font-size: 11px; font-weight: 700;
+  }
+  .tab.active .count { background: var(--ink); color: var(--on-primary); }
+
+  /* ─── Task list ─── */
+  .task-list { list-style: none; margin: 0; padding: 0; }
+  .task {
+    display: flex; align-items: center; gap: var(--base);
+    padding: var(--base) var(--md);
+    border-radius: var(--r-md);
+    margin-bottom: var(--xs);
+    background: var(--canvas);
+    border: 1px solid transparent;
+    transition: background .15s, border-color .15s;
+    animation: taskIn .35s cubic-bezier(.2,.8,.2,1);
+  }
+  @keyframes taskIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .task:hover { background: var(--surface-soft); }
+
+  .check {
+    width: 28px; height: 28px; flex-shrink: 0;
+    border-radius: var(--r-full);
+    border: 2px solid var(--border-strong);
+    background: transparent;
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: all .2s cubic-bezier(.2,.8,.2,1);
+    padding: 0;
+  }
+  .check:hover { border-color: var(--ink); transform: scale(1.05); }
+  .check svg { width: 14px; height: 14px; color: var(--on-primary); opacity: 0; transform: scale(.6); transition: all .2s; }
+  .task.done .check {
+    background: var(--primary); border-color: var(--primary);
+  }
+  .task.done .check svg { opacity: 1; transform: scale(1); }
+
+  .task-text {
+    flex: 1; font-size: 16px; font-weight: 500; line-height: 1.4;
+    color: var(--ink); cursor: text;
+    outline: 0; word-break: break-word;
+    padding: 2px 0;
+  }
+  .task.done .task-text {
+    text-decoration: line-through;
+    text-decoration-thickness: 2px;
+    text-decoration-color: var(--primary);
+    color: var(--muted);
+  }
+  .task-text[contenteditable="true"]:focus {
+    background: var(--surface-soft);
+    border-radius: 6px;
+    padding: 2px 6px;
+    margin: 0 -6px;
+  }
+
+  .task-meta {
+    font-size: 12px; color: var(--muted-soft); font-weight: 500;
+    flex-shrink: 0;
+  }
+  .task-del {
+    width: 32px; height: 32px; border-radius: var(--r-full);
+    background: transparent; border: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--muted-soft);
+    opacity: 0; transition: all .15s ease;
+  }
+  .task:hover .task-del { opacity: 1; }
+  .task-del:hover { background: var(--surface-strong); color: var(--error); }
+  .task-del svg { width: 16px; height: 16px; }
+
+  /* Vanish animation when completing all */
+  .task.vanishing {
+    animation: vanish .55s cubic-bezier(.4, 0, .2, 1) forwards;
+  }
+  @keyframes vanish {
+    0%   { opacity: 1; transform: translateX(0) scale(1); max-height: 64px; }
+    40%  { opacity: 1; transform: translateX(20px) scale(1.01); }
+    100% { opacity: 0; transform: translateX(-60px) scale(.95); max-height: 0; padding-top: 0; padding-bottom: 0; margin: 0; border-width: 0; }
+  }
+
+  /* ─── Empty / all-done state ─── */
+  .empty {
+    text-align: center; padding: var(--xxl) var(--lg);
+    color: var(--muted);
+  }
+  .empty-emoji { font-size: 48px; margin-bottom: var(--base); }
+  .empty h3 { font-size: 20px; font-weight: 600; color: var(--ink); margin: 0 0 var(--xs); }
+  .empty p { font-size: 14px; color: var(--muted); margin: 0; }
+
+  /* ─── Footer actions ─── */
+  .footer-actions {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: var(--xl); padding-top: var(--lg);
+    border-top: 1px solid var(--hairline-soft);
+  }
+  .text-button {
+    background: transparent; border: 0;
+    color: var(--ink); font-size: 14px; font-weight: 500;
+    padding: var(--sm) 0;
+    text-decoration: underline; text-underline-offset: 3px;
+  }
+  .text-button:hover { color: var(--primary); }
+  .text-button:disabled { color: var(--muted-soft); cursor: not-allowed; text-decoration: none; }
+
+  /* ─── Confetti canvas ─── */
+  #confetti-canvas {
+    position: fixed; inset: 0; pointer-events: none;
+    z-index: 999;
+  }
+
+  /* ─── Celebration overlay ─── */
+  .celebration {
+    position: fixed; inset: 0;
+    display: none;
+    align-items: center; justify-content: center;
+    z-index: 998;
+    background: radial-gradient(ellipse at center, rgba(255,255,255,0.85), rgba(255,255,255,0.7));
+    backdrop-filter: blur(4px);
+    pointer-events: none;
+  }
+  .celebration.show { display: flex; animation: celeFade .4s ease; }
+  @keyframes celeFade { from { opacity: 0; } to { opacity: 1; } }
+  .celebration-card {
+    text-align: center;
+    transform: scale(.7); opacity: 0;
+    animation: cardPop .6s cubic-bezier(.2,.9,.3,1.3) .1s forwards;
+  }
+  @keyframes cardPop {
+    to { transform: scale(1); opacity: 1; }
+  }
+  .celebration .big {
+    font-size: 104px; line-height: 1; margin-bottom: var(--lg);
+    display: inline-block;
+    filter: drop-shadow(0 8px 24px rgba(255, 56, 92, 0.25));
+    animation: emojiEntry .7s cubic-bezier(.2,.9,.3,1.4) both, bigBounce 1.1s ease-in-out .7s infinite alternate;
+  }
+  @keyframes emojiEntry {
+    0%   { transform: scale(0) rotate(-200deg); opacity: 0; }
+    60%  { transform: scale(1.2) rotate(15deg); opacity: 1; }
+    100% { transform: scale(1) rotate(0deg); opacity: 1; }
+  }
+  @keyframes bigBounce {
+    from { transform: translateY(0) rotate(-4deg); }
+    to { transform: translateY(-12px) rotate(4deg); }
+  }
+  .celebration h2 {
+    font-size: 40px; font-weight: 700;
+    margin: 0 0 var(--sm); letter-spacing: -1px;
+    background: linear-gradient(90deg, var(--ink) 0%, var(--primary) 50%, var(--ink) 100%);
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: titleShimmer 2.5s linear infinite;
+  }
+  @keyframes titleShimmer {
+    from { background-position: 200% 0; }
+    to   { background-position: -200% 0; }
+  }
+  .celebration p {
+    font-size: 16px; color: var(--muted); margin: 0;
+  }
+
+  /* ─── Single-task pop overlay ─── */
+  .pop-overlay {
+    position: fixed; pointer-events: none;
+    font-weight: 700; color: var(--primary);
+    font-size: 28px; z-index: 997;
+    transform: translate(-50%, -50%);
+    animation: popUp .9s cubic-bezier(.2,.8,.2,1) forwards;
+    white-space: nowrap;
+  }
+  @keyframes popUp {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(.6); }
+    20% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+    100% { opacity: 0; transform: translate(-50%, -180%) scale(1); }
+  }
+
+  /* ─── Paste preview modal ─── */
+  .modal-scrim {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    display: none; align-items: center; justify-content: center;
+    z-index: 100; padding: var(--lg);
+  }
+  .modal-scrim.show { display: flex; }
+  .modal {
+    background: var(--canvas); border-radius: var(--r-md);
+    box-shadow: var(--shadow-1);
+    max-width: 480px; width: 100%; max-height: 80vh;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    animation: modalIn .25s cubic-bezier(.2,.8,.2,1);
+  }
+  @keyframes modalIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .modal-header {
+    padding: var(--lg); border-bottom: 1px solid var(--hairline);
+  }
+  .modal-header h3 { margin: 0 0 var(--xs); font-size: 20px; font-weight: 600; }
+  .modal-header p { margin: 0; font-size: 14px; color: var(--muted); }
+  .modal-body {
+    padding: var(--base) var(--lg);
+    overflow-y: auto; flex: 1;
+  }
+  .modal-item {
+    display: flex; align-items: center; gap: var(--md);
+    padding: var(--md) 0;
+    border-bottom: 1px solid var(--hairline-soft);
+    font-size: 14px;
+  }
+  .modal-item:last-child { border-bottom: 0; }
+  .modal-item input[type="checkbox"] {
+    width: 18px; height: 18px; accent-color: var(--primary);
+    flex-shrink: 0;
+  }
+  .modal-footer {
+    padding: var(--base) var(--lg);
+    display: flex; gap: var(--sm); justify-content: flex-end;
+    border-top: 1px solid var(--hairline);
+  }
+  .btn {
+    height: 48px; padding: 0 var(--lg);
+    border-radius: var(--r-sm); border: 0;
+    font-size: 16px; font-weight: 500;
+    transition: background .15s, border-color .15s;
+  }
+  .btn-primary { background: var(--primary); color: var(--on-primary); }
+  .btn-primary:hover { background: var(--primary-active); }
+  .btn-secondary { background: var(--canvas); color: var(--ink); border: 1px solid var(--ink); }
+  .btn-secondary:hover { background: var(--surface-soft); }
+
+  /* ─── Mobile ─── */
+  @media (max-width: 744px) {
+    .top-nav { padding: 0 var(--base); height: 64px; }
+    .brand { font-size: 18px; }
+    .nav-stats { font-size: 13px; }
+    .container { padding: var(--xl) var(--base) 120px; }
+    .hero h1 { font-size: 24px; }
+    .input-pill { height: 56px; padding-left: var(--base); }
+    .add-orb { width: 40px; height: 40px; }
+    .celebration h2 { font-size: 28px; }
+    .celebration .big { font-size: 72px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="top-nav">
+  <div class="brand">
+    <span class="brand-dot">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+    </span>
+    <span>오늘의 할 일</span>
+  </div>
+  <div class="nav-stats" id="nav-stats">0 / 0 완료</div>
+</nav>
+
+<main class="container">
+  <section class="hero">
+    <h1 id="hero-title">오늘은 무엇을 끝낼까요?</h1>
+    <p id="hero-sub">한 줄에 하나씩 적고, 끝낸 일은 체크하세요.</p>
+  </section>
+
+  <div class="input-wrap">
+    <form class="input-pill" id="add-form" autocomplete="off">
+      <input
+        id="add-input"
+        type="text"
+        placeholder="할 일을 입력하고 Enter를 누르세요"
+        aria-label="할 일 입력"
+        spellcheck="false"
+      />
+      <button class="add-orb" type="submit" aria-label="추가">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </button>
+    </form>
+    <div class="input-hint">
+      <span class="kbd">Enter</span> 추가 &nbsp;·&nbsp;
+      <span class="kbd">Ctrl</span>+<span class="kbd">V</span> 엑셀에서 여러 줄 붙여넣기
+    </div>
+  </div>
+
+  <div class="progress-row">
+    <span class="progress-label">진행률 <b id="progress-percent">0%</b></span>
+    <span class="progress-label"><b id="progress-count">0</b> / <span id="progress-total">0</span></span>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+
+  <div class="tabs" role="tablist">
+    <button class="tab active" data-filter="all" role="tab">전체 <span class="count" id="count-all">0</span></button>
+    <button class="tab" data-filter="active" role="tab">남은 일 <span class="count" id="count-active">0</span></button>
+    <button class="tab" data-filter="done" role="tab">완료 <span class="count" id="count-done">0</span></button>
+  </div>
+
+  <ul class="task-list" id="task-list"></ul>
+
+  <div class="empty" id="empty" style="display:none;">
+    <div class="empty-emoji">✨</div>
+    <h3 id="empty-title">아직 할 일이 없어요</h3>
+    <p id="empty-sub">위 입력창에 입력하거나 엑셀에서 붙여넣어 시작하세요.</p>
+  </div>
+
+  <div class="footer-actions">
+    <button class="text-button" id="clear-done">완료한 일 비우기</button>
+    <button class="text-button" id="clear-all">전체 초기화</button>
+  </div>
+</main>
+
+<!-- Paste preview modal -->
+<div class="modal-scrim" id="paste-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="paste-title">여러 줄을 붙여 넣으셨네요</h3>
+      <p id="paste-sub">추가할 항목을 확인하세요. 빈 줄은 자동으로 제외됩니다.</p>
+    </div>
+    <div class="modal-body" id="paste-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="paste-cancel">취소</button>
+      <button class="btn btn-primary" id="paste-confirm">선택 항목 추가</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confetti & celebration -->
+<canvas id="confetti-canvas"></canvas>
+<div class="celebration" id="celebration">
+  <div class="celebration-card">
+    <div class="big" id="cele-emoji">🎉</div>
+    <h2 id="cele-title">전부 끝냈어요!</h2>
+    <p id="cele-sub">오늘 정말 멋졌어요. 잠깐 쉬어 가세요.</p>
+  </div>
+</div>
+
+<script>
+(() => {
+  /* ─────────── State ─────────── */
+  const STORAGE_KEY = 'todo.v1';
+  let tasks = loadTasks();
+  let filter = 'all';
+
+  function loadTasks() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+    catch { return []; }
+  }
+  function saveTasks() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+  }
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+  /* ─────────── Elements ─────────── */
+  const $form = document.getElementById('add-form');
+  const $input = document.getElementById('add-input');
+  const $list = document.getElementById('task-list');
+  const $empty = document.getElementById('empty');
+  const $emptyTitle = document.getElementById('empty-title');
+  const $emptySub = document.getElementById('empty-sub');
+  const $progressFill = document.getElementById('progress-fill');
+  const $progressPercent = document.getElementById('progress-percent');
+  const $progressCount = document.getElementById('progress-count');
+  const $progressTotal = document.getElementById('progress-total');
+  const $navStats = document.getElementById('nav-stats');
+  const $countAll = document.getElementById('count-all');
+  const $countActive = document.getElementById('count-active');
+  const $countDone = document.getElementById('count-done');
+  const $clearDone = document.getElementById('clear-done');
+  const $clearAll = document.getElementById('clear-all');
+
+  /* ─────────── Rendering ─────────── */
+  function visibleTasks() {
+    if (filter === 'active') return tasks.filter(t => !t.done);
+    if (filter === 'done') return tasks.filter(t => t.done);
+    return tasks;
+  }
+
+  function render() {
+    const list = visibleTasks();
+    $list.innerHTML = '';
+
+    const total = tasks.length;
+    const done = tasks.filter(t => t.done).length;
+    const active = total - done;
+    const pct = total === 0 ? 0 : Math.round((done / total) * 100);
+
+    $progressFill.style.width = pct + '%';
+    $progressPercent.textContent = pct + '%';
+    $progressCount.textContent = done;
+    $progressTotal.textContent = total;
+    $navStats.innerHTML = `<b>${done}</b> / ${total} 완료`;
+    $countAll.textContent = total;
+    $countActive.textContent = active;
+    $countDone.textContent = done;
+    $clearDone.disabled = done === 0;
+    $clearAll.disabled = total === 0;
+
+    if (total === 0) {
+      $empty.style.display = 'block';
+      $emptyTitle.textContent = '아직 할 일이 없어요';
+      $emptySub.textContent = '위 입력창에 입력하거나 엑셀에서 붙여넣어 시작하세요.';
+      return;
+    }
+    if (list.length === 0) {
+      $empty.style.display = 'block';
+      if (filter === 'active' && total > 0 && done === total) {
+        $emptyTitle.textContent = '오늘 할 일을 모두 끝냈어요 ✨';
+        $emptySub.textContent = '잠깐 숨 돌리고 와요.';
+      } else if (filter === 'done') {
+        $emptyTitle.textContent = '아직 완료한 항목이 없어요';
+        $emptySub.textContent = '하나씩 체크해 보세요.';
+      } else {
+        $emptyTitle.textContent = '표시할 항목이 없어요';
+        $emptySub.textContent = '다른 탭을 확인해 보세요.';
+      }
+      return;
+    }
+    $empty.style.display = 'none';
+
+    for (const t of list) {
+      $list.appendChild(taskEl(t));
+    }
+  }
+
+  function taskEl(t) {
+    const li = document.createElement('li');
+    li.className = 'task' + (t.done ? ' done' : '');
+    li.dataset.id = t.id;
+    li.innerHTML = `
+      <button class="check" aria-label="${t.done ? '미완료로 표시' : '완료로 표시'}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </button>
+      <div class="task-text" role="textbox" tabindex="0"></div>
+      <button class="task-del" aria-label="삭제">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+      </button>
+    `;
+    const $text = li.querySelector('.task-text');
+    $text.textContent = t.text;
+
+    li.querySelector('.check').addEventListener('click', e => {
+      const rect = e.currentTarget.getBoundingClientRect();
+      toggleTask(t.id, { x: rect.left + rect.width/2, y: rect.top + rect.height/2 });
+    });
+    li.querySelector('.task-del').addEventListener('click', () => deleteTask(t.id));
+
+    $text.addEventListener('dblclick', () => {
+      $text.setAttribute('contenteditable', 'plaintext-only');
+      $text.focus();
+      document.getSelection().selectAllChildren($text);
+    });
+    $text.addEventListener('blur', () => {
+      if ($text.getAttribute('contenteditable')) {
+        const v = $text.textContent.trim();
+        if (v) { t.text = v; saveTasks(); }
+        else { $text.textContent = t.text; }
+        $text.removeAttribute('contenteditable');
+      }
+    });
+    $text.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); $text.blur(); }
+      if (e.key === 'Escape') { $text.textContent = t.text; $text.blur(); }
+    });
+
+    return li;
+  }
+
+  /* ─────────── Mutations ─────────── */
+  function addTask(text) {
+    const v = text.trim();
+    if (!v) return null;
+    const t = { id: uid(), text: v, done: false, createdAt: Date.now() };
+    tasks.unshift(t);
+    saveTasks();
+    render();
+    return t;
+  }
+
+  function addTasksBulk(texts) {
+    const added = [];
+    for (const tx of texts) {
+      const v = tx.trim();
+      if (!v) continue;
+      const t = { id: uid(), text: v, done: false, createdAt: Date.now() };
+      tasks.unshift(t);
+      added.push(t);
+    }
+    saveTasks();
+    render();
+    return added;
+  }
+
+  function toggleTask(id, originPoint) {
+    const t = tasks.find(x => x.id === id);
+    if (!t) return;
+    const wasDone = t.done;
+    t.done = !t.done;
+    t.completedAt = t.done ? Date.now() : null;
+    saveTasks();
+
+    if (t.done && !wasDone) {
+      celebrateOne(originPoint, t.text);
+      vibrate([8, 30, 8]);
+      const allDone = tasks.length > 0 && tasks.every(x => x.done);
+      if (allDone) {
+        setTimeout(() => celebrateAll(), 280);
+      } else {
+        render();
+      }
+    } else {
+      render();
+    }
+  }
+
+  function deleteTask(id) {
+    tasks = tasks.filter(t => t.id !== id);
+    saveTasks();
+    render();
+  }
+
+  $clearDone.addEventListener('click', () => {
+    if (!tasks.some(t => t.done)) return;
+    if (!confirm('완료한 일을 모두 삭제할까요?')) return;
+    tasks = tasks.filter(t => !t.done);
+    saveTasks(); render();
+  });
+  $clearAll.addEventListener('click', () => {
+    if (tasks.length === 0) return;
+    if (!confirm('모든 할 일을 삭제할까요?')) return;
+    tasks = [];
+    saveTasks(); render();
+  });
+
+  /* ─────────── Form & Paste ─────────── */
+  $form.addEventListener('submit', e => {
+    e.preventDefault();
+    const v = $input.value;
+    if (!v.trim()) return;
+    addTask(v);
+    $input.value = '';
+    $input.focus();
+  });
+
+  $input.addEventListener('paste', e => {
+    const text = (e.clipboardData || window.clipboardData).getData('text');
+    if (!text) return;
+    // Split by newline or tab (Excel cells separated by tab in single row)
+    const lines = text.split(/\r?\n|\t/).map(s => s.trim()).filter(Boolean);
+    if (lines.length <= 1) return; // single-line paste: let default happen
+    e.preventDefault();
+    openPasteModal(lines);
+  });
+
+  /* ─────────── Paste preview modal ─────────── */
+  const $pasteModal = document.getElementById('paste-modal');
+  const $pasteBody = document.getElementById('paste-body');
+  const $pasteCancel = document.getElementById('paste-cancel');
+  const $pasteConfirm = document.getElementById('paste-confirm');
+  const $pasteTitle = document.getElementById('paste-title');
+
+  let pendingLines = [];
+
+  function openPasteModal(lines) {
+    pendingLines = lines;
+    $pasteTitle.textContent = `${lines.length}개의 항목을 추가할까요?`;
+    $pasteBody.innerHTML = '';
+    lines.forEach((line, i) => {
+      const row = document.createElement('label');
+      row.className = 'modal-item';
+      row.innerHTML = `
+        <input type="checkbox" checked data-idx="${i}" />
+        <span></span>
+      `;
+      row.querySelector('span').textContent = line;
+      $pasteBody.appendChild(row);
+    });
+    $pasteModal.classList.add('show');
+  }
+  function closePasteModal() {
+    $pasteModal.classList.remove('show');
+    pendingLines = [];
+    $input.value = '';
+    $input.focus();
+  }
+  $pasteCancel.addEventListener('click', closePasteModal);
+  $pasteModal.addEventListener('click', e => {
+    if (e.target === $pasteModal) closePasteModal();
+  });
+  $pasteConfirm.addEventListener('click', () => {
+    const chosen = [...$pasteBody.querySelectorAll('input[type=checkbox]')]
+      .filter(c => c.checked)
+      .map(c => pendingLines[+c.dataset.idx]);
+    if (chosen.length === 0) { closePasteModal(); return; }
+    addTasksBulk(chosen);
+    closePasteModal();
+    flashAddedToast(chosen.length);
+  });
+
+  function flashAddedToast(n) {
+    showPop({
+      x: window.innerWidth / 2,
+      y: 140
+    }, `+${n}개 추가됨`);
+  }
+
+  /* ─────────── Tabs ─────────── */
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      filter = tab.dataset.filter;
+      render();
+    });
+  });
+
+  /* ─────────── Haptic / Sound ─────────── */
+  function vibrate(pattern) {
+    try { if (navigator.vibrate) navigator.vibrate(pattern); } catch {}
+  }
+
+  let audioCtx;
+  function playDing(freqs = [880, 1320]) {
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const ctx = audioCtx;
+      const now = ctx.currentTime;
+      freqs.forEach((f, i) => {
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = 'sine'; o.frequency.value = f;
+        g.gain.setValueAtTime(0, now + i * 0.08);
+        g.gain.linearRampToValueAtTime(0.18, now + i * 0.08 + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.08 + 0.35);
+        o.connect(g); g.connect(ctx.destination);
+        o.start(now + i * 0.08);
+        o.stop(now + i * 0.08 + 0.4);
+      });
+    } catch {}
+  }
+
+  function playFanfare() {
+    playDing([523, 659, 784, 1047]); // C E G C — major chord upward
+  }
+
+  /* ─────────── Pop overlay ─────────── */
+  const popMessages = ['좋아요!', '잘했어요!', '굿!', '👍', '하나 끝!', '훌륭!', '✓ 완료', '나이스!'];
+  function showPop(point, msg) {
+    const el = document.createElement('div');
+    el.className = 'pop-overlay';
+    el.style.left = point.x + 'px';
+    el.style.top = point.y + 'px';
+    el.textContent = msg || popMessages[Math.floor(Math.random() * popMessages.length)];
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 1000);
+  }
+
+  /* ─────────── Confetti ─────────── */
+  const canvas = document.getElementById('confetti-canvas');
+  const ctx2d = canvas.getContext('2d');
+  let particles = [];
+  let confettiRunning = false;
+
+  function resizeCanvas() {
+    canvas.width = window.innerWidth * devicePixelRatio;
+    canvas.height = window.innerHeight * devicePixelRatio;
+    canvas.style.width = window.innerWidth + 'px';
+    canvas.style.height = window.innerHeight + 'px';
+    ctx2d.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  }
+  window.addEventListener('resize', resizeCanvas);
+  resizeCanvas();
+
+  const CONFETTI_COLORS = ['#ff385c', '#e00b41', '#222222', '#ffd1da', '#92174d', '#460479', '#ffffff'];
+
+  function burst(x, y, count, power = 1) {
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = (3 + Math.random() * 7) * power;
+      particles.push({
+        x, y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 4 * power,
+        g: 0.18,
+        size: 4 + Math.random() * 6,
+        color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
+        rot: Math.random() * Math.PI,
+        vr: (Math.random() - 0.5) * 0.3,
+        life: 0,
+        ttl: 90 + Math.random() * 60,
+        shape: Math.random() < 0.6 ? 'rect' : 'circle'
+      });
+    }
+    if (!confettiRunning) loopConfetti();
+  }
+
+  function loopConfetti() {
+    confettiRunning = true;
+    ctx2d.clearRect(0, 0, canvas.width, canvas.height);
+    particles = particles.filter(p => p.life < p.ttl && p.y < window.innerHeight + 40);
+    for (const p of particles) {
+      p.vy += p.g;
+      p.x += p.vx;
+      p.y += p.vy;
+      p.rot += p.vr;
+      p.life++;
+      const alpha = Math.max(0, 1 - p.life / p.ttl);
+      ctx2d.save();
+      ctx2d.globalAlpha = alpha;
+      ctx2d.translate(p.x, p.y);
+      ctx2d.rotate(p.rot);
+      ctx2d.fillStyle = p.color;
+      if (p.shape === 'rect') {
+        ctx2d.fillRect(-p.size/2, -p.size/2, p.size, p.size * 0.5);
+      } else {
+        ctx2d.beginPath();
+        ctx2d.arc(0, 0, p.size/2, 0, Math.PI*2);
+        ctx2d.fill();
+      }
+      ctx2d.restore();
+    }
+    if (particles.length > 0) {
+      requestAnimationFrame(loopConfetti);
+    } else {
+      ctx2d.clearRect(0, 0, canvas.width, canvas.height);
+      confettiRunning = false;
+    }
+  }
+
+  /* ─────────── Celebrations ─────────── */
+  function celebrateOne(point, text) {
+    if (point) {
+      burst(point.x, point.y, 28, 1);
+      showPop(point);
+    }
+    playDing();
+  }
+
+  const $cele = document.getElementById('celebration');
+  const $celeEmoji = document.getElementById('cele-emoji');
+  const $celeTitle = document.getElementById('cele-title');
+  const $celeSub = document.getElementById('cele-sub');
+
+  const CELE_VARIANTS = [
+    { e: '🎉', t: '전부 끝냈어요!', s: '오늘 정말 멋졌어요. 잠깐 쉬어 가세요.' },
+    { e: '🥳', t: '완벽한 하루!', s: '모든 할 일에 체크 표시. 자랑스러워요.' },
+    { e: '🚀', t: '클리어!', s: '집중력의 승리. 다음은 휴식 차례.' },
+    { e: '⭐️', t: '오늘의 별!', s: '한 칸도 남기지 않았어요.' },
+    { e: '🏆', t: '챔피언이에요!', s: '오늘 분의 일은 끝. 푹 쉬세요.' },
+  ];
+
+  function celebrateAll() {
+    // Show overlay with one of 5 random variants
+    const v = CELE_VARIANTS[Math.floor(Math.random() * CELE_VARIANTS.length)];
+    $celeEmoji.textContent = v.e;
+    $celeTitle.textContent = v.t;
+    $celeSub.textContent = v.s;
+    $cele.classList.add('show');
+
+    // Moderate single confetti burst — centered on the overlay
+    const cx = window.innerWidth / 2;
+    const cy = window.innerHeight * 0.4;
+    burst(cx, cy, 70, 1.3);
+    setTimeout(() => burst(cx, cy, 40, 1.1), 300);
+
+    // Major chord fanfare x2
+    playFanfare();
+    setTimeout(() => playFanfare(), 400);
+
+    // Auto-dismiss
+    setTimeout(() => {
+      $cele.classList.remove('show');
+      render();
+    }, 3600);
+  }
+
+  // Click to dismiss celebration early
+  $cele.addEventListener('click', () => {
+    $cele.classList.remove('show');
+    render();
+  });
+
+  /* ─────────── Keyboard shortcuts ─────────── */
+  document.addEventListener('keydown', e => {
+    // "/" focuses input (when not already typing)
+    if (e.key === '/' && document.activeElement.tagName !== 'INPUT' && !document.activeElement.isContentEditable) {
+      e.preventDefault();
+      $input.focus();
+    }
+    if (e.key === 'Escape' && $pasteModal.classList.contains('show')) {
+      closePasteModal();
+    }
+  });
+
+  /* ─────────── Init ─────────── */
+  render();
+  $input.focus();
+})();
+</script>
+
+</body>
+</html>
