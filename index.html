@@ -68,8 +68,28 @@
     color: var(--on-primary);
   }
   .brand-dot svg { width: 16px; height: 16px; }
+  .nav-right { display: flex; align-items: center; gap: var(--base); }
   .nav-stats { color: var(--muted); font-size: 14px; font-weight: 500; }
   .nav-stats b { color: var(--ink); font-weight: 700; }
+  .sync-status {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; font-weight: 600; color: var(--muted);
+    padding: 4px 10px; border-radius: var(--r-full);
+    background: var(--surface-soft); border: 1px solid var(--hairline-soft);
+    user-select: none;
+  }
+  .sync-status::before {
+    content: ''; width: 6px; height: 6px; border-radius: var(--r-full);
+    background: var(--muted-soft);
+  }
+  .sync-status[data-state="ok"] { color: #0a7d34; background: #ecf7ef; border-color: #cfe9d6; }
+  .sync-status[data-state="ok"]::before { background: #19a447; }
+  .sync-status[data-state="syncing"] { color: #8a5a00; background: #fff7e6; border-color: #f3e3bd; }
+  .sync-status[data-state="syncing"]::before { background: #d99100; animation: pulse 1s ease-in-out infinite; }
+  .sync-status[data-state="offline"] { color: var(--error); background: #fdecea; border-color: #f5c9c2; }
+  .sync-status[data-state="offline"]::before { background: var(--error); }
+  .sync-status[data-state="off"] { color: var(--muted); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
 
   /* ─── Page container ─── */
   .container {
@@ -454,6 +474,8 @@
     .top-nav { padding: 0 var(--base); height: 64px; }
     .brand { font-size: 18px; }
     .nav-stats { font-size: 13px; }
+    .nav-right { gap: 8px; }
+    .sync-status { font-size: 11px; padding: 3px 8px; }
     .container { padding: var(--xl) var(--base) 120px; }
     .hero h1 { font-size: 24px; }
     .input-pill { height: 56px; padding-left: var(--base); }
@@ -476,7 +498,10 @@
     </span>
     <span>오늘의 할 일</span>
   </div>
-  <div class="nav-stats" id="nav-stats">0 / 0 완료</div>
+  <div class="nav-right">
+    <span class="sync-status" id="sync-status" data-state="off" title="구글 시트 동기화 상태">로컬 전용</span>
+    <div class="nav-stats" id="nav-stats">0 / 0 완료</div>
+  </div>
 </nav>
 
 <main class="container">
@@ -566,6 +591,14 @@
 
 <script>
 (() => {
+  /* ─────────── Sync config ─────────── */
+  // Apps Script 웹앱 URL (.../exec). 비워두면 동기화 OFF, 로컬 전용 모드로 동작.
+  const SYNC_URL = 'https://script.google.com/macros/s/AKfycby7EVmwSM0xitEwaYz9FdU7BWDVBntF_TJ--uM2JRPH_GD_RueHJHkcGtLPh1SGFAlv/exec';
+  // apps-script.gs 의 SHARED_TOKEN 과 반드시 동일해야 함
+  const SYNC_TOKEN = 'a0qm2pWec_u4WZNNmChbnEfaGDzjgD01';
+  const SYNC_POLL_MS = 30000;        // 30초마다 원격 변경 확인
+  const SYNC_DEBOUNCE_MS = 800;      // 로컬 변경 후 800ms 모았다가 한 번에 푸시
+
   /* ─────────── State ─────────── */
   const STORAGE_KEY = 'todo.v1';
   let tasks = loadTasks();
@@ -577,6 +610,7 @@
   }
   function saveTasks() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+    schedulePush();
   }
   function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 
@@ -1021,8 +1055,103 @@
     }
   });
 
+  /* ─────────── Google Sheets sync ─────────── */
+  // 전략: 마지막-쓰기-우선 (full snapshot). 단일 사용자 가정.
+  //  - 로컬 변경 → localStorage 즉시 + 800ms 디바운스 푸시
+  //  - 30초마다 (탭 활성 시) 원격 풀, 다른 기기 변경 반영
+  //  - 오프라인이면 로컬은 계속 동작, 온라인 복귀 시 큐된 푸시 1회 실행
+  const syncEnabled = !!SYNC_URL;
+  let lastSyncedAt = 0;
+  let pushTimer = null;
+  let inFlight = false;
+  let pendingPush = false;
+
+  function setSyncStatus(state, text) {
+    const el = document.getElementById('sync-status');
+    if (!el) return;
+    el.dataset.state = state;
+    el.textContent = text;
+  }
+
+  async function pullRemote() {
+    if (!syncEnabled) return;
+    try {
+      setSyncStatus('syncing', '동기화 중');
+      const url = `${SYNC_URL}?token=${encodeURIComponent(SYNC_TOKEN)}&t=${Date.now()}`;
+      const res = await fetch(url, { method: 'GET', redirect: 'follow' });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || 'pull failed');
+      // 원격이 더 최신이면 채택
+      if (data.updatedAt && data.updatedAt > lastSyncedAt) {
+        tasks = Array.isArray(data.tasks) ? data.tasks : [];
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+        lastSyncedAt = data.updatedAt;
+        render();
+      } else if (!lastSyncedAt) {
+        lastSyncedAt = data.updatedAt || 0;
+      }
+      setSyncStatus('ok', '동기화됨');
+    } catch (_) {
+      setSyncStatus('offline', '오프라인');
+    }
+  }
+
+  function schedulePush() {
+    if (!syncEnabled) return;
+    clearTimeout(pushTimer);
+    pushTimer = setTimeout(pushRemote, SYNC_DEBOUNCE_MS);
+  }
+
+  async function pushRemote() {
+    if (!syncEnabled) return;
+    if (inFlight) { pendingPush = true; return; }
+    inFlight = true;
+    try {
+      setSyncStatus('syncing', '동기화 중');
+      // text/plain 으로 보내 CORS preflight 회피 (Apps Script 가 e.postData.contents 로 받음)
+      const res = await fetch(SYNC_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ token: SYNC_TOKEN, tasks }),
+        redirect: 'follow',
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || 'push failed');
+      lastSyncedAt = data.updatedAt || Date.now();
+      setSyncStatus('ok', '동기화됨');
+    } catch (_) {
+      setSyncStatus('offline', '오프라인');
+      // 온라인 복귀 시 재시도되도록 큐 유지
+      pendingPush = true;
+    } finally {
+      inFlight = false;
+      if (pendingPush) {
+        pendingPush = false;
+        // 약간 지연 후 재시도 (오프라인 시엔 다음 가시성 이벤트에 다시 트리거됨)
+        setTimeout(() => { if (syncEnabled) pushRemote(); }, 1500);
+      }
+    }
+  }
+
+  function startSync() {
+    if (!syncEnabled) {
+      setSyncStatus('off', '로컬 전용');
+      return;
+    }
+    pullRemote();
+    setInterval(() => {
+      if (document.visibilityState === 'visible' && !inFlight) pullRemote();
+    }, SYNC_POLL_MS);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && !inFlight) pullRemote();
+    });
+    window.addEventListener('online', () => { pullRemote(); if (pendingPush) pushRemote(); });
+    window.addEventListener('offline', () => setSyncStatus('offline', '오프라인'));
+  }
+
   /* ─────────── Init ─────────── */
   render();
+  startSync();
   $input.focus();
 })();
 </script>
