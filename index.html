@@ -132,18 +132,24 @@
     padding: 0 8px 0 var(--md);
     transition: box-shadow .15s ease;
   }
-  .priority-select {
-    flex-shrink: 0;
-    height: 40px;
-    margin-right: var(--md);
-    padding: 0 var(--sm);
-    border: 1px solid var(--hairline);
-    border-radius: var(--r-md);
-    background: var(--surface-soft);
-    font: 700 15px var(--font); color: var(--ink);
-    outline: none; cursor: pointer;
+  .priority-group {
+    display: inline-flex; gap: 3px; flex-shrink: 0;
   }
-  .priority-select:focus { border-color: var(--ink); }
+  .p-btn {
+    width: 26px; height: 26px;
+    border-radius: var(--r-sm);
+    border: 1px solid var(--hairline);
+    background: var(--canvas); color: var(--muted-soft);
+    font-size: 12px; font-weight: 800;
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 0;
+    transition: all .12s ease;
+  }
+  .p-btn:hover { border-color: var(--ink); color: var(--ink); transform: scale(1.06); }
+  .p-btn:active { transform: scale(.94); }
+  .p-btn.sel.priority-A, .p-btn.sel.priority-B, .p-btn.sel.priority-C, .p-btn.sel.priority-D { cursor: default; }
+  .priority-group-lg { gap: 4px; margin-right: var(--md); }
+  .priority-group-lg .p-btn { width: 34px; height: 34px; font-size: 14px; }
   .input-pill:focus-within {
     box-shadow: rgba(0,0,0,0.02) 0 0 0 1px, rgba(0,0,0,0.08) 0 4px 12px 0, rgba(0,0,0,0.14) 0 6px 14px 0;
   }
@@ -314,23 +320,11 @@
   }
   .task.done .check svg { opacity: 1; transform: scale(1); }
 
-  .priority-badge {
-    flex-shrink: 0;
-    width: 28px; height: 28px;
-    border-radius: var(--r-sm);
-    border: 1px solid transparent;
-    font-size: 13px; font-weight: 800;
-    display: inline-flex; align-items: center; justify-content: center;
-    padding: 0;
-    transition: transform .1s ease, opacity .15s ease;
-  }
-  .priority-badge:hover { transform: scale(1.08); }
-  .priority-badge:active { transform: scale(.92); }
   .priority-A { color: #c13515; background: #fdecea; border-color: #f5c9c2; }
   .priority-B { color: #8a5a00; background: #fff7e6; border-color: #f3e3bd; }
   .priority-C { color: #0a7d34; background: #ecf7ef; border-color: #cfe9d6; }
   .priority-D { color: #460479; background: #f3ecfb; border-color: #ddc9f2; }
-  .task.done .priority-badge { opacity: .45; }
+  .task.done .priority-group { opacity: .45; }
 
   .task-text {
     flex: 1; font-size: 16px; font-weight: 500; line-height: 1.4;
@@ -535,8 +529,11 @@
     .sync-status { font-size: 11px; padding: 3px 8px; }
     .container { padding: var(--xl) var(--base) 120px; }
     .hero h1 { font-size: 24px; }
-    .input-pill { height: 56px; padding-left: var(--base); }
+    .input-pill { height: 56px; padding-left: var(--md); }
     .add-orb { width: 40px; height: 40px; }
+    .p-btn { width: 22px; height: 22px; font-size: 11px; }
+    .priority-group { gap: 2px; }
+    .priority-group-lg .p-btn { width: 30px; height: 30px; font-size: 13px; }
     .celebration h2 { font-size: 28px; }
     .celebration .big { font-size: 72px; }
   }
@@ -573,12 +570,7 @@
 
   <div class="input-wrap">
     <form class="input-pill" id="add-form" autocomplete="off">
-      <select class="priority-select" id="priority-select" aria-label="중요도 선택" title="새 할 일의 중요도">
-        <option value="A">A</option>
-        <option value="B" selected>B</option>
-        <option value="C">C</option>
-        <option value="D">D</option>
-      </select>
+      <div class="priority-group priority-group-lg" id="priority-picker" role="radiogroup" aria-label="새 할 일의 중요도"></div>
       <input
         id="add-input"
         type="text"
@@ -598,7 +590,7 @@
       <span class="kbd">A</span> 매우 중요 &nbsp;
       <span class="kbd">B</span> 중요 &nbsp;
       <span class="kbd">C</span> 사소한 업무 &nbsp;
-      <span class="kbd">D</span> AI·타인에게 위임 &nbsp;·&nbsp; 배지를 클릭하면 변경돼요
+      <span class="kbd">D</span> AI·타인에게 위임 &nbsp;·&nbsp; 항목 옆 글자를 클릭해 바로 변경
     </div>
   </div>
 
@@ -723,9 +715,28 @@
   const $countDone = document.getElementById('count-done');
   const $clearDone = document.getElementById('clear-done');
   const $clearAll = document.getElementById('clear-all');
-  const $prioritySelect = document.getElementById('priority-select');
+  const $priorityPicker = document.getElementById('priority-picker');
   const $sortToggle = document.getElementById('sort-toggle');
   const $datetimeText = document.getElementById('datetime-text');
+
+  /* ─────────── New-task priority picker (one-click segmented) ─────────── */
+  let newTaskPriority = 'B';
+  function priorityButtonsHTML(selected) {
+    return PRIORITIES.map(p =>
+      `<button type="button" class="p-btn${p === selected ? ' sel priority-' + p : ''}" data-p="${p}" title="${PRIORITY_INFO[p]}" aria-pressed="${p === selected}">${p}</button>`
+    ).join('');
+  }
+  function renderPriorityPicker() {
+    $priorityPicker.innerHTML = priorityButtonsHTML(newTaskPriority);
+  }
+  $priorityPicker.addEventListener('click', e => {
+    const btn = e.target.closest('.p-btn');
+    if (!btn) return;
+    newTaskPriority = btn.dataset.p;
+    renderPriorityPicker();
+    $input.focus();
+  });
+  renderPriorityPicker();
 
   /* ─────────── Clock ─────────── */
   const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
@@ -813,7 +824,7 @@
       <button class="check" aria-label="${t.done ? '미완료로 표시' : '완료로 표시'}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
       </button>
-      <button class="priority-badge priority-${pr}" title="${PRIORITY_INFO[pr]} (클릭하여 변경)" aria-label="중요도 ${pr}, 클릭하여 변경">${pr}</button>
+      <div class="priority-group" role="radiogroup" aria-label="중요도">${priorityButtonsHTML(pr)}</div>
       <div class="task-text" role="textbox" tabindex="0"></div>
       <button class="task-del" aria-label="삭제">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
@@ -827,9 +838,10 @@
       toggleTask(t.id, { x: rect.left + rect.width/2, y: rect.top + rect.height/2 });
     });
     li.querySelector('.task-del').addEventListener('click', () => deleteTask(t.id));
-    li.querySelector('.priority-badge').addEventListener('click', () => {
-      const cur = PRIORITIES.indexOf(normalizePriority(t.priority));
-      t.priority = PRIORITIES[(cur + 1) % PRIORITIES.length];
+    li.querySelector('.priority-group').addEventListener('click', e => {
+      const btn = e.target.closest('.p-btn');
+      if (!btn || btn.dataset.p === t.priority) return;
+      t.priority = btn.dataset.p;
       saveTasks();
       render();
     });
@@ -859,7 +871,7 @@
   function addTask(text) {
     const v = text.trim();
     if (!v) return null;
-    const t = { id: uid(), text: v, done: false, priority: $prioritySelect.value, createdAt: Date.now() };
+    const t = { id: uid(), text: v, done: false, priority: newTaskPriority, createdAt: Date.now() };
     tasks.unshift(t);
     saveTasks();
     render();
@@ -871,7 +883,7 @@
     for (const tx of texts) {
       const v = tx.trim();
       if (!v) continue;
-      const t = { id: uid(), text: v, done: false, priority: $prioritySelect.value, createdAt: Date.now() };
+      const t = { id: uid(), text: v, done: false, priority: newTaskPriority, createdAt: Date.now() };
       tasks.unshift(t);
       added.push(t);
     }
