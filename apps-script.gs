@@ -21,13 +21,26 @@
 
 const SHARED_TOKEN = 'a0qm2pWec_u4WZNNmChbnEfaGDzjgD01';
 const SHEET_NAME = 'tasks';
+const HISTORY_SHEET_NAME = '완료기록';
+const TIMEZONE = 'Asia/Seoul';
+const PRIORITIES = ['A', 'B', 'C', 'D'];
 
 function getSheet_() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let sh = ss.getSheetByName(SHEET_NAME);
   if (!sh) {
     sh = ss.insertSheet(SHEET_NAME);
-    sh.appendRow(['id', 'text', 'done', 'createdAt', 'completedAt']);
+    sh.appendRow(['id', 'text', 'done', 'priority', 'createdAt', 'completedAt']);
+  }
+  return sh;
+}
+
+function getHistorySheet_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sh = ss.getSheetByName(HISTORY_SHEET_NAME);
+  if (!sh) {
+    sh = ss.insertSheet(HISTORY_SHEET_NAME);
+    sh.appendRow(['날짜', '중요도', '할 일', '완료 시각', 'id']);
   }
   return sh;
 }
@@ -44,13 +57,20 @@ function readTasks_() {
   const sh = getSheet_();
   const values = sh.getDataRange().getValues();
   if (values.length <= 1) return [];
+  // 헤더 기준으로 열을 찾아 이전 스키마(priority 없음)의 데이터도 안전하게 읽음
+  const header = values[0].map(String);
+  const col = name => header.indexOf(name);
+  const iId = col('id'), iText = col('text'), iDone = col('done');
+  const iPr = col('priority'), iCr = col('createdAt'), iCo = col('completedAt');
+  const num = v => (v === '' || v === null || v === undefined) ? null : Number(v);
   return values.slice(1)
     .map(r => ({
-      id: String(r[0] || ''),
-      text: String(r[1] || ''),
-      done: r[2] === true || String(r[2]).toLowerCase() === 'true',
-      createdAt: r[3] === '' || r[3] === null ? null : Number(r[3]),
-      completedAt: r[4] === '' || r[4] === null ? null : Number(r[4]),
+      id: iId < 0 ? '' : String(r[iId] || ''),
+      text: iText < 0 ? '' : String(r[iText] || ''),
+      done: iDone >= 0 && (r[iDone] === true || String(r[iDone]).toLowerCase() === 'true'),
+      priority: iPr >= 0 && PRIORITIES.indexOf(String(r[iPr])) >= 0 ? String(r[iPr]) : 'B',
+      createdAt: iCr < 0 ? null : num(r[iCr]),
+      completedAt: iCo < 0 ? null : num(r[iCo]),
     }))
     .filter(t => t.id);
 }
@@ -58,20 +78,69 @@ function readTasks_() {
 function writeTasks_(tasks) {
   const sh = getSheet_();
   sh.clearContents();
-  sh.appendRow(['id', 'text', 'done', 'createdAt', 'completedAt']);
+  sh.appendRow(['id', 'text', 'done', 'priority', 'createdAt', 'completedAt']);
   if (tasks.length > 0) {
     const rows = tasks.map(t => [
       String(t.id || ''),
       String(t.text || ''),
       !!t.done,
+      PRIORITIES.indexOf(String(t.priority)) >= 0 ? String(t.priority) : 'B',
       t.createdAt == null ? '' : Number(t.createdAt),
       t.completedAt == null ? '' : Number(t.completedAt),
     ]);
-    sh.getRange(2, 1, rows.length, 5).setValues(rows);
+    sh.getRange(2, 1, rows.length, 6).setValues(rows);
   }
+  syncHistory_(tasks);
   const now = Date.now();
   setUpdatedAt_(now);
   return now;
+}
+
+/**
+ * 완료기록 시트: 완료된 할 일을 날짜별로 누적 저장.
+ *  - 완료된 항목은 id 기준으로 한 줄씩 기록 (중복 방지)
+ *  - 완료를 취소하면 해당 기록 삭제
+ *  - 목록에서 지워진 항목("완료한 일 비우기" 포함)의 기록은 영구 보존
+ */
+function syncHistory_(tasks) {
+  const sh = getHistorySheet_();
+  const values = sh.getDataRange().getValues();
+  const idToRow = {};
+  for (let i = 1; i < values.length; i++) {
+    const id = String(values[i][4] || '');
+    if (id) idToRow[id] = i + 1;
+  }
+
+  const currentIds = {};
+  const doneIds = {};
+  const newRows = [];
+  tasks.forEach(function (t) {
+    if (!t.id) return;
+    currentIds[t.id] = true;
+    if (t.done && t.completedAt) {
+      doneIds[t.id] = true;
+      const d = new Date(Number(t.completedAt));
+      const row = [
+        Utilities.formatDate(d, TIMEZONE, 'yyyy-MM-dd'),
+        PRIORITIES.indexOf(String(t.priority)) >= 0 ? String(t.priority) : 'B',
+        String(t.text || ''),
+        Utilities.formatDate(d, TIMEZONE, 'HH:mm'),
+        String(t.id),
+      ];
+      if (idToRow[t.id]) sh.getRange(idToRow[t.id], 1, 1, 5).setValues([row]);
+      else newRows.push(row);
+    }
+  });
+
+  // 완료 취소된 항목의 기록 제거 (아래에서 위로 지워야 행 번호가 안 밀림)
+  for (let i = values.length - 1; i >= 1; i--) {
+    const id = String(values[i][4] || '');
+    if (id && currentIds[id] && !doneIds[id]) sh.deleteRow(i + 1);
+  }
+
+  if (newRows.length > 0) {
+    sh.getRange(sh.getLastRow() + 1, 1, newRows.length, 5).setValues(newRows);
+  }
 }
 
 function jsonOut_(obj) {

@@ -99,6 +99,17 @@
 
   /* ─── Hero ─── */
   .hero { margin-bottom: var(--xl); }
+  .datetime {
+    display: inline-flex; align-items: center; gap: var(--sm);
+    font-size: 14px; font-weight: 600; color: var(--body);
+    background: var(--surface-soft);
+    border: 1px solid var(--hairline-soft);
+    border-radius: var(--r-full);
+    padding: 6px 14px;
+    margin-bottom: var(--md);
+    font-variant-numeric: tabular-nums;
+  }
+  .datetime svg { width: 14px; height: 14px; color: var(--primary); flex-shrink: 0; }
   .hero h1 {
     font-size: 28px; font-weight: 700; line-height: 1.43;
     color: var(--ink); margin: 0 0 var(--xs);
@@ -118,9 +129,21 @@
     border-radius: var(--r-full);
     box-shadow: var(--shadow-1);
     height: 64px;
-    padding: 0 8px 0 var(--lg);
+    padding: 0 8px 0 var(--md);
     transition: box-shadow .15s ease;
   }
+  .priority-select {
+    flex-shrink: 0;
+    height: 40px;
+    margin-right: var(--md);
+    padding: 0 var(--sm);
+    border: 1px solid var(--hairline);
+    border-radius: var(--r-md);
+    background: var(--surface-soft);
+    font: 700 15px var(--font); color: var(--ink);
+    outline: none; cursor: pointer;
+  }
+  .priority-select:focus { border-color: var(--ink); }
   .input-pill:focus-within {
     box-shadow: rgba(0,0,0,0.02) 0 0 0 1px, rgba(0,0,0,0.08) 0 4px 12px 0, rgba(0,0,0,0.14) 0 6px 14px 0;
   }
@@ -240,6 +263,22 @@
     font-size: 11px; font-weight: 700;
   }
   .tab.active .count { background: var(--ink); color: var(--on-primary); }
+  .sort-toggle {
+    margin-left: auto; align-self: center;
+    background: transparent;
+    border: 1px solid var(--hairline);
+    border-radius: var(--r-full);
+    padding: 6px 12px; margin-bottom: 6px;
+    font-size: 13px; font-weight: 600; color: var(--muted);
+    display: inline-flex; align-items: center; gap: 5px;
+    transition: all .15s ease;
+  }
+  .sort-toggle:hover { border-color: var(--ink); color: var(--ink); }
+  .sort-toggle.active {
+    border-color: var(--ink); color: var(--ink);
+    background: var(--surface-soft);
+  }
+  .sort-toggle svg { width: 13px; height: 13px; }
 
   /* ─── Task list ─── */
   .task-list { list-style: none; margin: 0; padding: 0; }
@@ -274,6 +313,24 @@
     background: var(--primary); border-color: var(--primary);
   }
   .task.done .check svg { opacity: 1; transform: scale(1); }
+
+  .priority-badge {
+    flex-shrink: 0;
+    width: 28px; height: 28px;
+    border-radius: var(--r-sm);
+    border: 1px solid transparent;
+    font-size: 13px; font-weight: 800;
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 0;
+    transition: transform .1s ease, opacity .15s ease;
+  }
+  .priority-badge:hover { transform: scale(1.08); }
+  .priority-badge:active { transform: scale(.92); }
+  .priority-A { color: #c13515; background: #fdecea; border-color: #f5c9c2; }
+  .priority-B { color: #8a5a00; background: #fff7e6; border-color: #f3e3bd; }
+  .priority-C { color: #0a7d34; background: #ecf7ef; border-color: #cfe9d6; }
+  .priority-D { color: #460479; background: #f3ecfb; border-color: #ddc9f2; }
+  .task.done .priority-badge { opacity: .45; }
 
   .task-text {
     flex: 1; font-size: 16px; font-weight: 500; line-height: 1.4;
@@ -506,12 +563,22 @@
 
 <main class="container">
   <section class="hero">
+    <div class="datetime" id="datetime">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <span id="datetime-text"></span>
+    </div>
     <h1 id="hero-title">오늘은 무엇을 끝낼까요?</h1>
     <p id="hero-sub">한 줄에 하나씩 적고, 끝낸 일은 체크하세요.</p>
   </section>
 
   <div class="input-wrap">
     <form class="input-pill" id="add-form" autocomplete="off">
+      <select class="priority-select" id="priority-select" aria-label="중요도 선택" title="새 할 일의 중요도">
+        <option value="A">A</option>
+        <option value="B" selected>B</option>
+        <option value="C">C</option>
+        <option value="D">D</option>
+      </select>
       <input
         id="add-input"
         type="text"
@@ -526,6 +593,12 @@
     <div class="input-hint">
       <span class="kbd">Enter</span> 추가 &nbsp;·&nbsp;
       <span class="kbd">Ctrl</span>+<span class="kbd">V</span> 엑셀에서 여러 줄 붙여넣기
+    </div>
+    <div class="input-hint">
+      <span class="kbd">A</span> 매우 중요 &nbsp;
+      <span class="kbd">B</span> 중요 &nbsp;
+      <span class="kbd">C</span> 사소한 업무 &nbsp;
+      <span class="kbd">D</span> AI·타인에게 위임 &nbsp;·&nbsp; 배지를 클릭하면 변경돼요
     </div>
   </div>
 
@@ -548,6 +621,10 @@
     <button class="tab active" data-filter="all" role="tab">전체 <span class="count" id="count-all">0</span></button>
     <button class="tab" data-filter="active" role="tab">남은 일 <span class="count" id="count-active">0</span></button>
     <button class="tab" data-filter="done" role="tab">완료 <span class="count" id="count-done">0</span></button>
+    <button class="sort-toggle" id="sort-toggle" title="켜면 A → B → C → D 순으로 정렬됩니다">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5h10"/><path d="M11 9h7"/><path d="M11 13h4"/><path d="M3 17l3 3 3-3"/><path d="M6 4v16"/></svg>
+      중요도순
+    </button>
   </div>
 
   <ul class="task-list" id="task-list"></ul>
@@ -601,11 +678,26 @@
 
   /* ─────────── State ─────────── */
   const STORAGE_KEY = 'todo.v1';
+  const SORT_KEY = 'todo.sort.v1';
+  const PRIORITIES = ['A', 'B', 'C', 'D'];
+  const PRIORITY_INFO = {
+    A: 'A — 직접 처리해야 하는 매우 중요한 업무',
+    B: 'B — 직접 처리해야 하나 A보다는 덜 중요한 업무',
+    C: 'C — 직접 처리해야 하는 사소한 업무',
+    D: 'D — AI나 타인에게 위임해야 하는 업무',
+  };
   let tasks = loadTasks();
   let filter = 'all';
+  let sortByPriority = localStorage.getItem(SORT_KEY) === 'priority';
 
+  function normalizePriority(p) {
+    return PRIORITIES.includes(p) ? p : 'B';
+  }
+  function normalizeTasks(arr) {
+    return (Array.isArray(arr) ? arr : []).map(t => ({ ...t, priority: normalizePriority(t.priority) }));
+  }
   function loadTasks() {
-    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+    try { return normalizeTasks(JSON.parse(localStorage.getItem(STORAGE_KEY)) || []); }
     catch { return []; }
   }
   function saveTasks() {
@@ -631,12 +723,38 @@
   const $countDone = document.getElementById('count-done');
   const $clearDone = document.getElementById('clear-done');
   const $clearAll = document.getElementById('clear-all');
+  const $prioritySelect = document.getElementById('priority-select');
+  const $sortToggle = document.getElementById('sort-toggle');
+  const $datetimeText = document.getElementById('datetime-text');
+
+  /* ─────────── Clock ─────────── */
+  const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
+  function updateClock() {
+    const now = new Date();
+    const h = now.getHours();
+    const ampm = h < 12 ? '오전' : '오후';
+    const h12 = h % 12 === 0 ? 12 : h % 12;
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    $datetimeText.textContent =
+      `${now.getFullYear()}년 ${now.getMonth() + 1}월 ${now.getDate()}일 (${DAY_NAMES[now.getDay()]}) ${ampm} ${h12}:${mm}`;
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
 
   /* ─────────── Rendering ─────────── */
   function visibleTasks() {
-    if (filter === 'active') return tasks.filter(t => !t.done);
-    if (filter === 'done') return tasks.filter(t => t.done);
-    return tasks;
+    let list = tasks;
+    if (filter === 'active') list = tasks.filter(t => !t.done);
+    if (filter === 'done') list = tasks.filter(t => t.done);
+    if (sortByPriority) {
+      list = [...list].sort((a, b) => {
+        const pa = PRIORITIES.indexOf(a.priority);
+        const pb = PRIORITIES.indexOf(b.priority);
+        if (pa !== pb) return pa - pb;
+        return (b.createdAt || 0) - (a.createdAt || 0);
+      });
+    }
+    return list;
   }
 
   function render() {
@@ -690,10 +808,12 @@
     const li = document.createElement('li');
     li.className = 'task' + (t.done ? ' done' : '');
     li.dataset.id = t.id;
+    const pr = normalizePriority(t.priority);
     li.innerHTML = `
       <button class="check" aria-label="${t.done ? '미완료로 표시' : '완료로 표시'}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
       </button>
+      <button class="priority-badge priority-${pr}" title="${PRIORITY_INFO[pr]} (클릭하여 변경)" aria-label="중요도 ${pr}, 클릭하여 변경">${pr}</button>
       <div class="task-text" role="textbox" tabindex="0"></div>
       <button class="task-del" aria-label="삭제">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
@@ -707,6 +827,12 @@
       toggleTask(t.id, { x: rect.left + rect.width/2, y: rect.top + rect.height/2 });
     });
     li.querySelector('.task-del').addEventListener('click', () => deleteTask(t.id));
+    li.querySelector('.priority-badge').addEventListener('click', () => {
+      const cur = PRIORITIES.indexOf(normalizePriority(t.priority));
+      t.priority = PRIORITIES[(cur + 1) % PRIORITIES.length];
+      saveTasks();
+      render();
+    });
 
     $text.addEventListener('dblclick', () => {
       $text.setAttribute('contenteditable', 'plaintext-only');
@@ -733,7 +859,7 @@
   function addTask(text) {
     const v = text.trim();
     if (!v) return null;
-    const t = { id: uid(), text: v, done: false, createdAt: Date.now() };
+    const t = { id: uid(), text: v, done: false, priority: $prioritySelect.value, createdAt: Date.now() };
     tasks.unshift(t);
     saveTasks();
     render();
@@ -745,7 +871,7 @@
     for (const tx of texts) {
       const v = tx.trim();
       if (!v) continue;
-      const t = { id: uid(), text: v, done: false, createdAt: Date.now() };
+      const t = { id: uid(), text: v, done: false, priority: $prioritySelect.value, createdAt: Date.now() };
       tasks.unshift(t);
       added.push(t);
     }
@@ -876,6 +1002,18 @@
       render();
     });
   });
+
+  /* ─────────── Sort toggle ─────────── */
+  function reflectSortToggle() {
+    $sortToggle.classList.toggle('active', sortByPriority);
+  }
+  $sortToggle.addEventListener('click', () => {
+    sortByPriority = !sortByPriority;
+    localStorage.setItem(SORT_KEY, sortByPriority ? 'priority' : 'manual');
+    reflectSortToggle();
+    render();
+  });
+  reflectSortToggle();
 
   /* ─────────── Haptic / Sound ─────────── */
   function vibrate(pattern) {
@@ -1083,7 +1221,7 @@
       if (!data.ok) throw new Error(data.error || 'pull failed');
       // 원격이 더 최신이면 채택
       if (data.updatedAt && data.updatedAt > lastSyncedAt) {
-        tasks = Array.isArray(data.tasks) ? data.tasks : [];
+        tasks = normalizeTasks(data.tasks);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
         lastSyncedAt = data.updatedAt;
         render();
