@@ -119,6 +119,36 @@
     font-weight: 400; line-height: 1.43;
   }
 
+  /* ─── Category switch (직장/집) ─── */
+  .cat-switch {
+    display: inline-flex; gap: var(--xs); padding: var(--xs);
+    background: var(--surface-soft);
+    border: 1px solid var(--hairline-soft);
+    border-radius: var(--r-full);
+    margin-bottom: var(--lg);
+  }
+  .cat-btn {
+    display: inline-flex; align-items: center; gap: var(--sm);
+    border: 0; background: transparent;
+    padding: 10px 22px; border-radius: var(--r-full);
+    font-size: 15px; font-weight: 600; color: var(--muted);
+    transition: all .15s ease;
+  }
+  .cat-btn svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .cat-btn:hover { color: var(--ink); }
+  .cat-btn.active {
+    background: var(--canvas); color: var(--ink);
+    box-shadow: var(--shadow-1);
+  }
+  .cat-count {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 20px; height: 20px; padding: 0 6px;
+    border-radius: var(--r-full);
+    background: var(--surface-strong); color: var(--muted);
+    font-size: 11px; font-weight: 700;
+  }
+  .cat-btn.active .cat-count { background: var(--primary); color: var(--on-primary); }
+
   /* ─── Input pill (signature search-bar style) ─── */
   .input-wrap {
     margin-bottom: var(--xl); position: relative;
@@ -568,6 +598,17 @@
     <p id="hero-sub">한 줄에 하나씩 적고, 끝낸 일은 체크하세요.</p>
   </section>
 
+  <div class="cat-switch" role="tablist" aria-label="직장/집 목록 선택">
+    <button class="cat-btn" data-cat="work" role="tab">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+      직장 <span class="cat-count" id="cat-count-work">0</span>
+    </button>
+    <button class="cat-btn" data-cat="home" role="tab">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      집 <span class="cat-count" id="cat-count-home">0</span>
+    </button>
+  </div>
+
   <div class="input-wrap">
     <form class="input-pill" id="add-form" autocomplete="off">
       <div class="priority-group priority-group-lg" id="priority-picker" role="radiogroup" aria-label="새 할 일의 중요도"></div>
@@ -678,15 +719,26 @@
     C: 'C — 직접 처리해야 하는 사소한 업무',
     D: 'D — AI나 타인에게 위임해야 하는 업무',
   };
+  const CATEGORY_KEY = 'todo.category.v1';
+  const CATEGORIES = ['work', 'home'];
+  const CATEGORY_LABEL = { work: '직장', home: '집' };
   let tasks = loadTasks();
   let filter = 'all';
   let sortByPriority = localStorage.getItem(SORT_KEY) === 'priority';
+  let category = CATEGORIES.includes(localStorage.getItem(CATEGORY_KEY)) ? localStorage.getItem(CATEGORY_KEY) : 'work';
 
   function normalizePriority(p) {
     return PRIORITIES.includes(p) ? p : 'B';
   }
+  function normalizeCategory(c) {
+    return CATEGORIES.includes(c) ? c : 'work';
+  }
   function normalizeTasks(arr) {
-    return (Array.isArray(arr) ? arr : []).map(t => ({ ...t, priority: normalizePriority(t.priority) }));
+    return (Array.isArray(arr) ? arr : []).map(t => ({
+      ...t,
+      priority: normalizePriority(t.priority),
+      category: normalizeCategory(t.category),
+    }));
   }
   function loadTasks() {
     try { return normalizeTasks(JSON.parse(localStorage.getItem(STORAGE_KEY)) || []); }
@@ -753,10 +805,14 @@
   setInterval(updateClock, 1000);
 
   /* ─────────── Rendering ─────────── */
+  function catTasks() {
+    return tasks.filter(t => t.category === category);
+  }
   function visibleTasks() {
-    let list = tasks;
-    if (filter === 'active') list = tasks.filter(t => !t.done);
-    if (filter === 'done') list = tasks.filter(t => t.done);
+    const scoped = catTasks();
+    let list = scoped;
+    if (filter === 'active') list = scoped.filter(t => !t.done);
+    if (filter === 'done') list = scoped.filter(t => t.done);
     if (sortByPriority) {
       list = [...list].sort((a, b) => {
         const pa = PRIORITIES.indexOf(a.priority);
@@ -768,12 +824,33 @@
     return list;
   }
 
+  const HERO_TEXT = {
+    work: { title: '오늘 직장에서 무엇을 끝낼까요?', sub: '한 줄에 하나씩 적고, 끝낸 일은 체크하세요.' },
+    home: { title: '오늘 집에서는 무엇을 할까요?', sub: '한 줄에 하나씩 적고, 끝낸 일은 체크하세요.' },
+  };
+
+  function renderCatSwitch() {
+    document.querySelectorAll('.cat-btn').forEach(btn => {
+      const active = btn.dataset.cat === category;
+      btn.classList.toggle('active', active);
+      btn.setAttribute('aria-selected', active);
+    });
+    for (const c of CATEGORIES) {
+      const el = document.getElementById('cat-count-' + c);
+      if (el) el.textContent = tasks.filter(t => t.category === c && !t.done).length;
+    }
+    document.getElementById('hero-title').textContent = HERO_TEXT[category].title;
+    document.getElementById('hero-sub').textContent = HERO_TEXT[category].sub;
+  }
+
   function render() {
+    const scoped = catTasks();
     const list = visibleTasks();
     $list.innerHTML = '';
+    renderCatSwitch();
 
-    const total = tasks.length;
-    const done = tasks.filter(t => t.done).length;
+    const total = scoped.length;
+    const done = scoped.filter(t => t.done).length;
     const active = total - done;
     const pct = total === 0 ? 0 : Math.round((done / total) * 100);
 
@@ -790,7 +867,7 @@
 
     if (total === 0) {
       $empty.style.display = 'block';
-      $emptyTitle.textContent = '아직 할 일이 없어요';
+      $emptyTitle.textContent = `${CATEGORY_LABEL[category]} 할 일이 아직 없어요`;
       $emptySub.textContent = '위 입력창에 입력하거나 엑셀에서 붙여넣어 시작하세요.';
       return;
     }
@@ -871,7 +948,7 @@
   function addTask(text) {
     const v = text.trim();
     if (!v) return null;
-    const t = { id: uid(), text: v, done: false, priority: newTaskPriority, createdAt: Date.now() };
+    const t = { id: uid(), text: v, done: false, priority: newTaskPriority, category, createdAt: Date.now() };
     tasks.unshift(t);
     saveTasks();
     render();
@@ -883,7 +960,7 @@
     for (const tx of texts) {
       const v = tx.trim();
       if (!v) continue;
-      const t = { id: uid(), text: v, done: false, priority: newTaskPriority, createdAt: Date.now() };
+      const t = { id: uid(), text: v, done: false, priority: newTaskPriority, category, createdAt: Date.now() };
       tasks.unshift(t);
       added.push(t);
     }
@@ -903,7 +980,8 @@
     if (t.done && !wasDone) {
       celebrateOne(originPoint, t.text);
       vibrate([8, 30, 8]);
-      const allDone = tasks.length > 0 && tasks.every(x => x.done);
+      const scoped = catTasks();
+      const allDone = scoped.length > 0 && scoped.every(x => x.done);
       if (allDone) {
         setTimeout(() => celebrateAll(), 280);
       } else {
@@ -921,15 +999,15 @@
   }
 
   $clearDone.addEventListener('click', () => {
-    if (!tasks.some(t => t.done)) return;
-    if (!confirm('완료한 일을 모두 삭제할까요?')) return;
-    tasks = tasks.filter(t => !t.done);
+    if (!catTasks().some(t => t.done)) return;
+    if (!confirm(`${CATEGORY_LABEL[category]} 목록에서 완료한 일을 모두 삭제할까요?`)) return;
+    tasks = tasks.filter(t => !(t.category === category && t.done));
     saveTasks(); render();
   });
   $clearAll.addEventListener('click', () => {
-    if (tasks.length === 0) return;
-    if (!confirm('모든 할 일을 삭제할까요?')) return;
-    tasks = [];
+    if (catTasks().length === 0) return;
+    if (!confirm(`${CATEGORY_LABEL[category]} 목록의 모든 할 일을 삭제할까요?`)) return;
+    tasks = tasks.filter(t => t.category !== category);
     saveTasks(); render();
   });
 
@@ -1004,6 +1082,17 @@
       y: 140
     }, `+${n}개 추가됨`);
   }
+
+  /* ─────────── Category switch (직장/집) ─────────── */
+  document.querySelectorAll('.cat-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (btn.dataset.cat === category) return;
+      category = btn.dataset.cat;
+      localStorage.setItem(CATEGORY_KEY, category);
+      render();
+      $input.focus();
+    });
+  });
 
   /* ─────────── Tabs ─────────── */
   document.querySelectorAll('.tab').forEach(tab => {

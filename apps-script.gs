@@ -24,13 +24,14 @@ const SHEET_NAME = 'tasks';
 const HISTORY_SHEET_NAME = '완료기록';
 const TIMEZONE = 'Asia/Seoul';
 const PRIORITIES = ['A', 'B', 'C', 'D'];
+const CATEGORIES = ['work', 'home'];
 
 function getSheet_() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let sh = ss.getSheetByName(SHEET_NAME);
   if (!sh) {
     sh = ss.insertSheet(SHEET_NAME);
-    sh.appendRow(['id', 'text', 'done', 'priority', 'createdAt', 'completedAt']);
+    sh.appendRow(['id', 'text', 'done', 'priority', 'category', 'createdAt', 'completedAt']);
   }
   return sh;
 }
@@ -61,7 +62,7 @@ function readTasks_() {
   const header = values[0].map(String);
   const col = name => header.indexOf(name);
   const iId = col('id'), iText = col('text'), iDone = col('done');
-  const iPr = col('priority'), iCr = col('createdAt'), iCo = col('completedAt');
+  const iPr = col('priority'), iCat = col('category'), iCr = col('createdAt'), iCo = col('completedAt');
   const num = v => (v === '' || v === null || v === undefined) ? null : Number(v);
   return values.slice(1)
     .map(r => ({
@@ -69,6 +70,7 @@ function readTasks_() {
       text: iText < 0 ? '' : String(r[iText] || ''),
       done: iDone >= 0 && (r[iDone] === true || String(r[iDone]).toLowerCase() === 'true'),
       priority: iPr >= 0 && PRIORITIES.indexOf(String(r[iPr])) >= 0 ? String(r[iPr]) : 'B',
+      category: iCat >= 0 && CATEGORIES.indexOf(String(r[iCat])) >= 0 ? String(r[iCat]) : 'work',
       createdAt: iCr < 0 ? null : num(r[iCr]),
       completedAt: iCo < 0 ? null : num(r[iCo]),
     }))
@@ -78,17 +80,18 @@ function readTasks_() {
 function writeTasks_(tasks) {
   const sh = getSheet_();
   sh.clearContents();
-  sh.appendRow(['id', 'text', 'done', 'priority', 'createdAt', 'completedAt']);
+  sh.appendRow(['id', 'text', 'done', 'priority', 'category', 'createdAt', 'completedAt']);
   if (tasks.length > 0) {
     const rows = tasks.map(t => [
       String(t.id || ''),
       String(t.text || ''),
       !!t.done,
       PRIORITIES.indexOf(String(t.priority)) >= 0 ? String(t.priority) : 'B',
+      CATEGORIES.indexOf(String(t.category)) >= 0 ? String(t.category) : 'work',
       t.createdAt == null ? '' : Number(t.createdAt),
       t.completedAt == null ? '' : Number(t.completedAt),
     ]);
-    sh.getRange(2, 1, rows.length, 6).setValues(rows);
+    sh.getRange(2, 1, rows.length, 7).setValues(rows);
   }
   syncHistory_(tasks);
   const now = Date.now();
